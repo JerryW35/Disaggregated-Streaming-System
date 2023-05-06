@@ -1,0 +1,34 @@
+{
+  "controlPlane": {
+    "etcd_endpoints": ["http://etcd:8179"],
+    "test_etcd_conn": false,
+    "cp_grpc_port": 8008,
+    "scale_up_portion": 0.75,
+    "control_port": 9008,
+    "watermark_interval": 0.8,
+    "out_of_order_grace_period": 2,
+    "consistent_control_grace_period": 0.2
+  },
+  "taskManager": {
+    "cp_host": "127.0.0.1",
+    "cp_port": 8008,
+    "operator_quota": 5,
+    "tm_port": 8018,
+    "operator_bufferSize": 20,
+    "useHybrid": true,
+    "useMigration": false,
+    "useCache": false,
+    "rocksDBPath": "data.db",
+    "batch_size": 1,
+    "batch_timeout_ms": 10
+  },
+  "prometheus": {
+    "enabled": false,
+    "prometheus_port": 9089,
+    "prometheus_host": "127.0.0.1",
+    "pushgateway_host": "pushgateway",
+    "pushgateway_port": 9091,
+    "job_name": "latency_pushgateway"
+  },
+  "fileName": "data.txt"
+}

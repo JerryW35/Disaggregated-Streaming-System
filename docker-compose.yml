@@ -1,0 +1,31 @@
+version: '3'
+name: "dataflow"
+services:
+  controlplane:
+    build:
+        context: .
+        dockerfile: ControlPlaneDockerfile
+    ports:
+        - '8008:8008'
+  taskmanager:
+    build:
+        context: .
+        dockerfile: TaskManagerDockerfile
+    expose:
+      - '8018'
+    links:
+      - controlplane
+    depends_on:
+      - controlplane
+    deploy:
+        replicas: 2
+  pushgateway:
+    image: prom/pushgateway
+    ports:
+      - '9091:9091'
+    container_name: pushgateway
+
+
+volumes:
+  etcd_data:
+    driver: local

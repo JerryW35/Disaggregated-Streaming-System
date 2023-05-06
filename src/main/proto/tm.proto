@@ -1,0 +1,203 @@
+syntax = "proto3";
+option java_package="pb";
+import "google/protobuf/empty.proto";
+package pb;
+
+/*
+TaskManager's RPC handler protocols,
+include:
+1. Query TaskManager's status:
+  Operator Quota,
+  Current load,
+  Current state store load?
+2. Configure Operators
+ */
+
+message TMStatusRequest{
+
+}
+
+message OperatorStatus{
+  string name = 1;
+  string address = 2;
+  int32 inputQueueLength = 3;
+  int32 outputQueueLength = 4;
+}
+
+message TMStatusResponse{
+  int32 operatorQuota = 1; // the number of operators it's allowed to have
+  int32 operatorCount = 2; // the number of operators it's currently running
+  //int32 stateStoreLoad = 3; //
+  repeated OperatorStatus operatorStatus = 4;
+}
+
+message OPStatusRequest{
+  string name = 1;
+}
+
+message OperatorLowWatermarkRequest{
+  string name = 1;
+  string content = 2;
+}
+
+message OperatorLowWatermarkResponse{
+  int64 lowWatermark = 1;
+}
+
+message OperatorExternalTimestampRequest{
+  string name = 1;
+  string content = 2;
+  int64 reconfigTimestamp = 3;
+}
+
+//send to upstream operator, map<string,OperatorConfig>: <downStreamOp1,
+// downStreamOp1 - OperatorConfig(future start and end area)>
+//todo: currentOp = map1-0, original filter1-0: start = 1, end = 6
+//todo:       ---filter1-0
+//todo: map1-0
+//todo: map1-1
+//todo:       ---filter1-1
+//todo: <filter1-0, OperatorConfig(... start = 1, end = 3, ...)>
+//todo: <filter1-1, OperatorConfig(... start = 4, end = 6, ...)>
+//todo: <4, timstamp-> ---> filter1-0
+message ReconfigMsg{
+  // only for type=CONTROL, contains map of <operatorName, new config>
+  map<string,OperatorConfig> config = 1;
+  int64 effectiveWaterMark = 2;
+  int32 version = 3;
+}
+
+message Msg{
+  enum MsgType {
+    DATA = 0;
+    CONTROL = 1;
+    WATERMARK = 2;
+  }
+  MsgType type = 1;
+  optional string senderOperatorName = 2;
+  optional string receiverOperatorName = 3;
+  optional bytes data = 4;
+  optional ReconfigMsg reconfigMsg = 5;
+  int64 ingestTime = 6;
+  int64 extIngestTime = 7;
+}
+
+message MsgList{
+  repeated Msg msgs = 1;
+}
+
+enum PartitionStrategy{
+  HASH = 0;
+  ROUND_ROBIN = 1;
+  BROADCAST = 2;
+}
+
+enum OperatorType{
+  SOURCE = 0;
+  SINK = 1;
+  MAP = 2;
+  COUNT = 3;
+}
+
+message OutputMetadata{
+  string name = 1;
+  string address = 2;
+  // tells the upstream operator where to send the data
+  PartitionPlan partitionPlan = 3;
+}
+
+message PartitionPlan{
+  int32 partitionStart = 1;
+  int32 partitionEnd = 2;
+}
+
+message OperatorConfig{
+  string name = 2;
+  repeated OutputMetadata outputMetadata = 3; // The next TM's address: ip:port
+  PartitionStrategy partitionStrategy = 4;
+  int32 bufferSize = 5;
+  // tells this operator the new partitions it should take care of
+  PartitionPlan partitionPlan = 6;
+  int32 logicalStage = 7;
+  repeated string peerTMAddrs = 8;
+  string localTMAddr = 9;
+  /* for each TM, we only consider if it needs new partitions from other TMs,
+  the TM itself doesn't need to know if it needs to give up some partitions.
+  If one TM receives a partition request, it then removes the partition from itself.
+  */
+  optional bool noOverride = 10;
+}
+
+service TMService{
+  rpc GetStatus(TMStatusRequest) returns (TMStatusResponse);
+  rpc AddOperator(AddOperatorRequest) returns (google.protobuf.Empty);
+  rpc RemoveOperator(RemoveOperatorRequest) returns (google.protobuf.Empty);
+  rpc PushMsgList(MsgList) returns (google.protobuf.Empty);
+  rpc PushReconfigMsg(ReconfigMsg) returns (google.protobuf.Empty);
+  rpc GetOperatorStatus(OPStatusRequest) returns (OperatorStatus);
+  rpc RemoveState(RemoveStateRequest) returns (google.protobuf.Empty);
+  rpc GetState(GetStateRequest) returns (GetStateResponse);
+  rpc PullStates(PullStatesRequest) returns (PullStatesResponse);
+  rpc UpdateState(UpdateStateRequest) returns (google.protobuf.Empty);
+  rpc ClearState(ClearStateRequest) returns (google.protobuf.Empty);
+  rpc ListStateKeys(ListKeysRequest) returns (ListKeysResponse);
+  rpc GetOperatorLowWatermark(OperatorLowWatermarkRequest) returns (OperatorLowWatermarkResponse);
+  rpc setOperatorExternalTimestamp(OperatorExternalTimestampRequest) returns (google.protobuf.Empty);
+}
+
+message PullStatesRequest{
+  int32 logicalStage = 1;
+  PartitionPlan partitionPlan = 3;
+}
+
+message PullStatesResponse{
+  repeated StateKV stateKVs = 1;
+}
+
+message StateKV{
+  string key = 1;
+  bytes obj = 2;
+}
+
+// TM should calculate config diff based on this
+message AddOperatorRequest{
+  OperatorConfig config = 1;
+  bytes obj = 2; // serialized object
+}
+
+message RemoveOperatorRequest{
+  string operatorName = 1;
+}
+
+message ReConfigOperatorRequest{
+  OperatorConfig config = 1;
+}
+
+message RemoveStateRequest{
+  string stateKey = 1;
+}
+
+message GetStateRequest{
+  string stateKey = 1;
+}
+
+message GetStateResponse{
+  bytes obj = 1;
+}
+
+message ClearStateRequest{
+  string stateKey = 1;
+}
+
+message ListKeysRequest{
+  string prefix = 1;
+}
+
+message ListKeysResponse{
+  repeated string keys = 1;
+}
+
+message UpdateStateRequest{
+  string stateKey = 1;
+  bytes obj = 2;
+}

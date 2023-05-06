@@ -1,0 +1,120 @@
+syntax = "proto3";
+option java_package="pb";
+import "google/protobuf/empty.proto";
+/*
+Control Plane's RPC handler protocols,
+include:
+1. TM registry
+2. Routing table RPC (state service)
+3. ...?
+ */
+
+message RegisterTMRequest {
+    string name = 1;
+    string address = 2;
+    int32 port = 3;
+}
+
+message RegisterTMResponse {
+    string status = 1;
+    // the ip address visible to other actors
+    string externalAddress = 2;
+}
+
+message DeregisterTMRequest {
+    string name = 1;
+}
+
+message DeregisterTMResponse {
+    string status = 1;
+}
+
+message ReportQueueStatusRequest {
+    string tm_name = 1;
+    string op_name = 2;
+    int32 inputQueueLength = 3;
+}
+
+message ReportQueueStatusResponse {
+    string status = 1;
+}
+
+// allow TMs to register at CP
+service CPService {
+    rpc RegisterTM(RegisterTMRequest) returns (RegisterTMResponse);
+    rpc DeregisterTM(DeregisterTMRequest) returns (DeregisterTMResponse);
+    rpc ReportStatus(ReportQueueStatusRequest) returns (ReportQueueStatusResponse);
+    rpc FindRemoteStateAddress(FindRemoteStateAddressRequest) returns (FindRemoteStateAddressResponse);
+    rpc AddRemoteStateAddress(AddRemoteStateAddressRequest) returns (AddRemoteStateAddressResponse);
+    rpc RemoveRemoteStateAddress(RemoveRemoteStateAddressRequest) returns (RemoveRemoteStateAddressResponse);
+    rpc UpdateRemoteStateAddress(UpdateRemoteStateAddressRequest) returns (UpdateRemoteStateAddressResponse);
+//    rpc GetConsistentAddress(GetConsistentAddressRequest) returns (GetConsistentAddressResponse);
+//    rpc AddConsistentNode(AddConsistentNodeRequest) returns (AddConsistentNodeResponse);
+//    rpc RemoveConsistentNode(RemoveConsistentNodeRequest) returns (RemoveConsistentNodeResponse);
+}
+
+message FindRemoteStateAddressRequest{
+    string stateKey=1;
+}
+
+message FindRemoteStateAddressResponse{
+    string address=1;
+}
+
+message AddRemoteStateAddressRequest{
+    string stateKey=1;
+    string address=2;
+}
+
+message AddRemoteStateAddressResponse{
+    string address=1;
+}
+
+message RemoveRemoteStateAddressRequest{
+    string stateKey=1;
+}
+
+message RemoveRemoteStateAddressResponse{
+
+}
+
+message UpdateRemoteStateAddressRequest{
+    string stateKey=1;
+    string address=2;
+}
+
+message UpdateRemoteStateAddressResponse{
+
+}
+
+message GetConsistentAddressRequest{
+    string key = 1;
+}
+
+message GetConsistentAddressResponse{
+    string address = 1;
+}
+
+message Triple {
+    string field1 = 1;
+    int32 field2 = 2;
+    int32 field3 = 3;
+}
+
+message AddConsistentNodeRequest{
+    string key=1;
+    string address=2;
+}
+
+message AddConsistentNodeResponse{
+    repeated Triple triples = 1;
+}
+
+message RemoveConsistentNodeRequest{
+    string key=1;
+}
+
+message RemoveConsistentNodeResponse{
+    repeated Triple triples = 1;
+}
+
